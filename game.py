@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from turtle import back
+from tkinter.simpledialog import askinteger
 from ttkthemes import ThemedTk
 import random
 from PIL import Image, ImageTk
@@ -24,6 +24,17 @@ class CatenaReazione:
         self.root.resizable(False, False)
         self.root.configure(bg="black")
         self.tempo_fermo = 0
+        self.create_menu()
+
+    def create_menu(self):
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+
+        Time = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Tempo", menu=Time)
+        Time.add_command(label="Imposta tempo", command=self.imposta_tempo)
+
+        # Puoi aggiungere più voci di menu qui se necessario
 
         # Carica l'immagine di sfondo
         background_image = Image.open("/home/luca/Documenti/Intesa/background.jpg")
@@ -96,6 +107,13 @@ class CatenaReazione:
         self.piu_punto_button.config(state=tk.DISABLED)
         self.meno_punto_button.config(state=tk.DISABLED)
 
+    def imposta_tempo(self):
+        nuovo_tempo = askinteger("Imposta tempo", "Inserisci il nuovo tempo in secondi:", parent=self.root)
+        if nuovo_tempo is not None:
+            self.timer_countdown = nuovo_tempo
+            self.tempo_fermo = 0
+            self.aggiorna_timer()
+
     def aggiorna_parola(self):
         if self.vocabolario:
             if not self.vocabolario_usato:
@@ -108,19 +126,17 @@ class CatenaReazione:
         else:
             self.parola_label.config(text="Vocabolario vuoto")
 
-    def resize_image(image_path, width, height):
-        original_image = Image.open(image_path)
-        resized_image = original_image.resize((width, height), Image.ANTIALIAS)
-        return ImageTk.PhotoImage(resized_image)
-
     def inizia_gioco(self):
         self.in_gioco = True
         self.inizia_premuto = True
-        self.timer_countdown = 120  # Imposta il tempo a 120 secondi
         self.aggiorna_parola()
         self.aggiorna_timer()
 
         self.start_button.place_forget()
+
+        self.reset_button = tk.Button(self.canvas, text="Reset", command=self.reset_game, relief="flat", bd=0,
+                                      font=("Impact", 15), foreground="black")
+        self.reset_button.place(x=258, y=237, width=110, height=35)
 
         self.stop_button.config(state=tk.NORMAL)
         self.riprendi_button.config(state=tk.DISABLED)
@@ -130,7 +146,7 @@ class CatenaReazione:
 
     def ferma_gioco(self):
         self.in_gioco = False
-        self.timer_label.config(text=f"{self.timer_countdown}")
+        self.timer_label.config(text=str(self.timer_countdown))
         self.tempo_fermo = self.timer_countdown  # Memorizza il tempo rimanente quando si ferma il gioco
 
         self.stop_button.config(state=tk.DISABLED)
@@ -156,9 +172,9 @@ class CatenaReazione:
 
     def aggiorna_timer(self):
         if self.in_gioco and self.timer_countdown > 0:
-            self.timer_label.config(text=f"{self.timer_countdown}")
+            self.timer_label.config(text=str(self.timer_countdown))
             self.timer_countdown -= 1
-            self.root.after(1000, self.aggiorna_timer)
+            self.timer_job = self.root.after(1000, self.aggiorna_timer)
         elif self.in_gioco:
             self.timer_label.config(text="X")
             self.in_gioco = False
@@ -172,11 +188,12 @@ class CatenaReazione:
             self.start_button.place(x=258, y=237, width=110, height=35)
             self.start_button.config(state=tk.NORMAL)
 
+
     def gestisci_punteggio(self, incremento):
         self.punteggio += incremento
         if self.punteggio < 0:
             self.punteggio = 0
-        self.punteggio_label.config(text=f"{self.punteggio}")
+        self.punteggio_label.config(text=str(self.punteggio))
 
     def aumenta_punteggio(self):
         if self.in_gioco or not self.in_gioco:
@@ -185,6 +202,27 @@ class CatenaReazione:
     def diminuisci_punteggio(self):
         if self.in_gioco or not self.in_gioco:
             self.gestisci_punteggio(-1)
+
+    def reset_game(self):
+        self.in_gioco = False
+        self.inizia_premuto = False
+        self.tempo_fermo = 0
+        self.timer_countdown = 120
+        self.punteggio = 0
+        self.aggiorna_parola()
+        if hasattr(self, 'timer_job'):
+            self.root.after_cancel(self.timer_job)
+        self.aggiorna_timer()
+        self.start_button.place_forget()
+        self.stop_button.config(state=tk.DISABLED)
+        self.riprendi_button.config(state=tk.DISABLED)
+        self.next_word_button.config(state=tk.DISABLED)
+        self.piu_punto_button.config(state=tk.DISABLED)
+        self.meno_punto_button.config(state=tk.DISABLED)
+        self.reset_button.place_forget()
+        self.start_button.place(x=258, y=237, width=110, height=35)
+        self.start_button.config(state=tk.NORMAL)
+
 
     def run(self):
         self.root.mainloop()
